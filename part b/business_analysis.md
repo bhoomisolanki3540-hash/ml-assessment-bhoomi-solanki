@@ -25,6 +25,8 @@ The objective is to determine the most effective promotion strategy for each sto
 **Justification:**
 The goal is to estimate expected sales under different promotional strategies. Since the output is continuous and depends on input features, regression is the most appropriate approach.
 
+Additionally, this model can be used in a **what-if analysis framework**, where different promotion types can be simulated to identify the optimal strategy for each store.
+
 ---
 
 ### (b) Why Items Sold is a Better Target than Revenue
@@ -35,16 +37,16 @@ Using **items sold** instead of revenue provides a more reliable measure of prom
 * A promotion may increase the number of items sold but reduce total revenue due to heavy discounts
 
 **Key Insight:**
-Items sold directly captures **customer demand and response**, which is the primary goal of promotions.
+Items sold directly captures **customer demand and response**, which is the primary objective of promotional campaigns.
 
 **Broader Principle:**
-In real-world machine learning projects, the target variable should align closely with the **business objective** and should not be distorted by external factors. Choosing the wrong target can lead to misleading model outcomes.
+In real-world machine learning projects, the target variable should align closely with the **true business objective** and should not be distorted by external factors. Choosing an inappropriate target variable can lead to misleading insights and suboptimal decisions.
 
 ---
 
 ### (c) Alternative Modelling Strategy
 
-Instead of using a single global model, a better approach would be:
+Instead of using a single global model, a more effective approach would be:
 
 * **Segmented Modelling**
 
@@ -56,10 +58,10 @@ Instead of using a single global model, a better approach would be:
 
 **OR**
 
-* Use a global model with **store-level features and interaction terms**
+* Use a global model enriched with **store-level features and interaction terms**
 
 **Justification:**
-Different store types respond differently to promotions due to variations in customer demographics, purchasing power, and competition. This approach captures **localised behaviour patterns** and improves model accuracy.
+Different store types respond differently to promotions due to variations in customer demographics, purchasing power, and competition. This approach captures **localized behavior patterns**, improving model accuracy and relevance.
 
 ---
 
@@ -77,7 +79,7 @@ The data is provided in four tables:
 **Joining Strategy:**
 
 * Join transactions with store attributes using `store_id`
-* Join promotion details using promotion identifier or date
+* Join promotion details using promotion identifiers or transaction dates
 * Join calendar data using `transaction_date`
 
 **Grain of Final Dataset:**
@@ -91,7 +93,8 @@ One row per **store per month**
 * Promotion applied during the month
 * Festival and weekend indicators
 
-This ensures consistency and aligns the dataset with the prediction objective.
+**Important Consideration:**
+Care must be taken to ensure that only information available up to the prediction period is used, avoiding **data leakage** from future data into the model.
 
 ---
 
@@ -106,16 +109,17 @@ The following analyses should be performed:
    Analyze monthly sales patterns to detect seasonality and trends
 
 3. **Correlation Heatmap**
-   Identify relationships between numerical features and the target variable
+   Identify strong predictors of `items_sold`, which can guide feature selection and model design
 
 4. **Sales Distribution (Histogram / Boxplot)**
-   Detect skewness and outliers, which may require transformation
+   Detect skewness and outliers, which may require transformation or robust modelling techniques
 
 **Impact on Modelling:**
 
-* Helps in feature selection
-* Identifies key drivers of sales
+* Helps identify key drivers of sales
+* Guides feature engineering decisions
 * Detects anomalies and data quality issues
+* Improves model reliability
 
 ---
 
@@ -125,14 +129,14 @@ Since 80% of transactions occur without promotions:
 
 **Impact:**
 
-* Model may become biased toward non-promotion scenarios
-* Reduced sensitivity to promotional effects
+* The model may become biased toward non-promotion scenarios
+* Reduced ability to accurately learn promotion effects
 
 **Solutions:**
 
-* Apply resampling techniques
+* Apply resampling techniques (oversampling/undersampling)
 * Introduce a binary feature indicating promotion presence
-* Use weighting strategies
+* Use weighting strategies during model training
 * Evaluate model performance separately for promotion and non-promotion cases
 
 ---
@@ -144,48 +148,51 @@ Since 80% of transactions occur without promotions:
 **Train-Test Strategy:**
 
 * Use a **time-based split**
-* Train on earlier data and test on the most recent period
+* Train on historical data and test on the most recent period
 
 **Why Not Random Split:**
 
-* Random splitting can cause **data leakage**
-* It uses future data to predict past outcomes, which is unrealistic
+* Random splitting can lead to **data leakage**
+* It allows future information to influence training, resulting in unrealistic performance estimates
 
 **Evaluation Metrics:**
 
 * **RMSE (Root Mean Squared Error):**
-  Penalizes large errors more heavily
+  Penalizes large prediction errors more heavily, which is important when large forecasting mistakes can lead to inventory or staffing issues
 
 * **MAE (Mean Absolute Error):**
-  Measures average prediction error
+  Measures average prediction error and provides an easily interpretable metric for business stakeholders
 
 **Interpretation:**
 
-* Lower RMSE indicates fewer large mistakes
-* Lower MAE indicates consistent prediction accuracy
+* Lower RMSE indicates fewer large prediction errors
+* Lower MAE indicates consistent prediction accuracy across stores
 
 ---
 
 ### (b) Explaining Model Recommendations
 
-To understand why different promotions are recommended:
+To understand why different promotions are recommended for the same store in different months:
 
-* Use **feature importance** from models like Random Forest
+* Use **feature importance** from models such as Random Forest
 * Analyze the impact of:
 
-  * Month (seasonality)
+  * Seasonal factors (month)
   * Festival indicators
-  * Historical sales patterns
+  * Historical sales trends
 
 **Example:**
 
-* December → High demand → Loyalty Points encourage repeat purchases
-* March → Lower demand → Flat Discounts attract price-sensitive customers
+* December → High demand → Loyalty Points Bonus encourages repeat purchases
+* March → Lower demand → Flat Discount attracts price-sensitive customers
 
-**Communication:**
+Additionally, **SHAP (SHapley Additive exPlanations)** values can be used to provide detailed, instance-level explanations of model predictions.
+
+**Communication Strategy:**
+
 Explain to stakeholders that:
 
-> The model adapts recommendations based on seasonal demand patterns and customer behavior across different time periods.
+> The model adapts recommendations based on seasonal demand patterns, customer behavior, and store characteristics, ensuring context-specific decision-making.
 
 ---
 
@@ -193,34 +200,38 @@ Explain to stakeholders that:
 
 **1. Model Saving**
 
-* Save the trained model using tools like `joblib` or `pickle`
+* Save the trained model using tools such as `joblib` or `pickle`
 
-**2. Monthly Prediction Process**
+**2. Monthly Prediction Pipeline**
 
 * Collect new monthly data
-* Apply the same preprocessing pipeline
+* Apply the same preprocessing pipeline used during training
 * Generate predictions for each store
 
 **3. Automation**
 
-* Schedule predictions at the beginning of each month
+* Schedule predictions at the beginning of each month using automated workflows
 
 **4. Monitoring**
+
 Track:
 
 * Prediction errors (RMSE, MAE)
-* Changes in data distribution (data drift)
-* Promotion performance trends
+* Data drift (changes in feature distributions)
+* Promotion effectiveness trends
 
-**5. Retraining Trigger**
+**5. Retraining Triggers**
 
 * Significant drop in model performance
-* Changes in customer behavior
+* Changes in customer behavior or market conditions
 * Introduction of new promotion strategies
+
+**6. Model Versioning**
+
+* Maintain version control for models and datasets to ensure reproducibility and traceability over time
 
 ---
 
 ## Final Conclusion
 
-This approach enables the company to make **data-driven promotion decisions**, improving sales performance while adapting to regional and seasonal variations.
-
+This approach enables the company to make **data-driven promotion decisions**, optimizing sales performance while adapting to regional differences, customer behavior, and seasonal patterns.
